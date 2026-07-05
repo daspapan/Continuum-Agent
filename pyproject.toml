@@ -1,0 +1,9 @@
+[project]
+name = "continuum-agent"
+version = "0.1.0"
+description = "Interruption-safe, memory-augmented Claude research agent"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

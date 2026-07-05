@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+*.sqlite3
+*.db
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# CDK
+infra/cdk.out/
+infra/.venv/
+infra/node_modules/
+*.cdk.staging/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# local run artifacts
+runs/
+*.log

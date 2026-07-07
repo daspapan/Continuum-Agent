@@ -4,7 +4,7 @@ Text -> vector embeddings.
 Two backends:
   - BedrockTitanEmbeddings: production backend, calls Amazon Bedrock's Titan
     Text Embeddings model. Requires AWS creds + Bedrock model access.
-  - LocalHashEmbeddings: deterministic, dependency-free "embedding" used for
+  - LocalHashEmbeddings: deterministic, dependency-free "embedding" backend used for
     local dev and tests so the whole pipeline can run without any AWS or
     Anthropic calls in CI. It's not semantically meaningful in the way a real
     embedding model is - it's a bag-of-tokens hash projected into a fixed

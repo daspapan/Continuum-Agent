@@ -73,7 +73,7 @@ class ResearchOrchestrator:
             if latest is None:
                 raise ValueError(f"no checkpoint found for run_id={run_id}; can't resume")
             state = latest.state
-            current_sources = state["_env_sources"]
+            current_sources = state.get("_env_sources", [])
             current_hash = compute_environment_hash(current_sources)
             if current_hash != latest.env_hash:
                 # Staleness on resume: something the last completed phase

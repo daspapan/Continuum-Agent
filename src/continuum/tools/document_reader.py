@@ -15,7 +15,7 @@ import hashlib
 def read(url: str, title: str = "") -> str:
     seed = hashlib.sha256(url.encode()).hexdigest()
     paragraphs = [
-        f"{title or url}: overview paragraph {seed[i:i + 4]} covering context and background.",
+        f"{title or url}: overview paragraph {seed[0:4]} covering context and background.",
         f"Key finding referenced in this source, id {seed[4:8]}, with supporting detail.",
         f"Caveat and limitation noted by the source author, ref {seed[8:12]}.",
     ]

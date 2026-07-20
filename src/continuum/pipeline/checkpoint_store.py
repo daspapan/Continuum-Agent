@@ -108,9 +108,12 @@ class DynamoDBCheckpointStore(CheckpointStore):
     """
     Production backend. Table schema (see infra/continuum_stack.py):
       partition key: run_id (S)
-      sort key: sk (S)  -> "{written_at_iso}#{phase}", so a Query with
-                            ScanIndexForward=False and Limit=1 gives `latest`
-                            in a single request with no filtering/scanning.
+      sort key: sk (S)  -> "{written_at_iso}#{phase}" for checkpoint items,
+                            "IDEM#{action}" for idempotency claims (see
+                            DynamoDBIdempotencyGuard, which shares this
+                            table). `latest`/`history` filter to items with a
+                            `phase` attribute so claim items never get read
+                            back as checkpoints.
     """
 
     def __init__(self, table_name: str, region: str | None = None):
@@ -137,22 +140,38 @@ class DynamoDBCheckpointStore(CheckpointStore):
         )
 
     def latest(self, run_id: str) -> Checkpoint | None:
-        from boto3.dynamodb.conditions import Key
+        # The run_id partition also holds idempotency-claim items (sk =
+        # "IDEM#...", written by DynamoDBIdempotencyGuard against the same
+        # table). Filter to items that are actually checkpoints - anything
+        # with a `phase` attribute - so a claim item never gets mistaken for
+        # the latest checkpoint. Filtering client-side would be wrong too;
+        # this uses a server-side FilterExpression so Limit=1 still means
+        # "one checkpoint," not "one item that might be a claim."
+        from boto3.dynamodb.conditions import Attr, Key
 
         resp = self._table.query(
             KeyConditionExpression=Key("run_id").eq(run_id),
+            FilterExpression=Attr("phase").exists(),
             ScanIndexForward=False,
-            Limit=1,
         )
         items = resp.get("Items", [])
         if not items:
             return None
+        # FilterExpression is applied after Limit in DynamoDB, so we can't
+        # combine Limit=1 with the filter and trust the result - sort here
+        # instead, which is cheap since a single run's checkpoint history is
+        # small (one item per phase, ~7 phases).
+        items.sort(key=lambda i: i["written_at"], reverse=True)
         return _item_to_checkpoint(items[0])
 
     def history(self, run_id: str) -> list[Checkpoint]:
-        from boto3.dynamodb.conditions import Key
+        from boto3.dynamodb.conditions import Attr, Key
 
-        resp = self._table.query(KeyConditionExpression=Key("run_id").eq(run_id), ScanIndexForward=True)
+        resp = self._table.query(
+            KeyConditionExpression=Key("run_id").eq(run_id),
+            FilterExpression=Attr("phase").exists(),
+            ScanIndexForward=True,
+        )
         return [_item_to_checkpoint(i) for i in resp.get("Items", [])]
 
 

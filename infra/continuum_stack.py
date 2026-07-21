@@ -62,7 +62,9 @@ class ContinuumStack(Stack):
             partition_key=dynamodb.Attribute(name="run_id", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="sk", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-            point_in_time_recovery=env_config.point_in_time_recovery,
+            point_in_time_recovery_specification=dynamodb.PointInTimeRecoverySpecification(
+                point_in_time_recovery_enabled=env_config.point_in_time_recovery
+            ),
             removal_policy=removal_policy,
         )
 
@@ -99,10 +101,7 @@ class ContinuumStack(Stack):
             "MemoryEncryptionPolicy",
             name=f"{collection_name}-enc",
             type="encryption",
-            policy=cdk.Fn.sub(
-                '{"Rules":[{"ResourceType":"collection","Resource":["collection/%s"]}],"AWSOwnedKey":true}',
-                {"collectionName": collection_name},
-            ).replace("%s", collection_name),
+            policy=f'{{"Rules":[{{"ResourceType":"collection","Resource":["collection/{collection_name}"]}}],"AWSOwnedKey":true}}',
         )
 
         network_policy = aoss.CfnSecurityPolicy(
@@ -120,8 +119,8 @@ class ContinuumStack(Stack):
             type="VECTORSEARCH",
             description="Semantic recall over past research reports",
         )
-        memory_collection.add_dependency(encryption_policy)
-        memory_collection.add_dependency(network_policy)
+        memory_collection.add_resource_dependency(encryption_policy)
+        memory_collection.add_resource_dependency(network_policy)
 
         # --- Ops alerting --------------------------------------------------
         ops_alerts_topic = sns.Topic(
@@ -187,7 +186,12 @@ class ContinuumStack(Stack):
             role=phase_runner_role,
             timeout=Duration.minutes(5),
             memory_size=512,
-            log_retention=logs.RetentionDays.ONE_MONTH,
+            log_group=logs.LogGroup(
+                self, "PhaseRunnerLogGroup",
+                log_group_name=f"/aws/lambda/continuum-phase-runner-{suffix}",
+                retention=logs.RetentionDays.ONE_MONTH,
+                removal_policy=removal_policy,
+            ),
             environment={
                 "CHECKPOINT_TABLE_NAME": checkpoint_table.table_name,
                 "OPENSEARCH_COLLECTION_ENDPOINT": memory_collection.attr_collection_endpoint,

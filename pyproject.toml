@@ -7,3 +7,7 @@ requires-python = ">=3.10"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "smoke: post-deploy checks against real AWS infra, not run by default",
+]
+addopts = "-m 'not smoke'"

@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: "Environment to deploy"
+        required: true
+        default: staging
+        type: choice
+        options: [dev, staging, prod]
+
+jobs:
+  deploy-dev:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g aws-cdk
+      - run: pip install -r infra/requirements.txt -r requirements.txt
+      - name: cdk deploy dev
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: cdk deploy --require-approval never -c env=dev -c account=${{ secrets.AWS_ACCOUNT_ID }}
+      - name: smoke test dev
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests/smoke -m smoke
+
+  deploy-staging-and-prod:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # `environment:` ties this job to a GitHub Environment with its own
+    # protection rules - specifically, prod requires a manual approval from
+    # a listed reviewer before this job proceeds. That approval gate is
+    # configured in repo Settings -> Environments -> prod, not in this file.
+    environment: ${{ github.event.inputs.target_env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g aws-cdk
+      - run: pip install -r infra/requirements.txt -r requirements.txt
+      - name: cdk deploy ${{ github.event.inputs.target_env }}
+        working-directory: infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: cdk deploy --require-approval never -c env=${{ github.event.inputs.target_env }} -c account=${{ secrets.AWS_ACCOUNT_ID }}
+      - name: smoke test
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pip install -r requirements-dev.txt
+          pytest tests/smoke -m smoke

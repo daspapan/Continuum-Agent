@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: |
+          pip install ruff
+          ruff check src tests
+
+      - name: Run tests
+        run: pytest --junitxml=test-results.xml
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+
+  cdk-synth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install CDK deps
+        working-directory: infra
+        run: pip install -r requirements.txt
+
+      - name: cdk synth (dev) - catches construct-level errors before deploy
+        working-directory: infra
+        run: python3 -c "
+          import aws_cdk as cdk
+          from continuum_stack import ContinuumStack, EnvConfig
+          app = cdk.App()
+          ContinuumStack(app, 'ContinuumStack-dev', env_config=EnvConfig('dev', False, False),
+                          env=cdk.Environment(account='123456789012', region='ap-south-1'))
+          app.synth()
+          print('synth ok')
+          "

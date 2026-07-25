@@ -50,12 +50,4 @@ jobs:
 
       - name: cdk synth (dev) - catches construct-level errors before deploy
         working-directory: infra
-        run: python3 -c "
-          import aws_cdk as cdk
-          from continuum_stack import ContinuumStack, EnvConfig
-          app = cdk.App()
-          ContinuumStack(app, 'ContinuumStack-dev', env_config=EnvConfig('dev', False, False),
-                          env=cdk.Environment(account='123456789012', region='ap-south-1'))
-          app.synth()
-          print('synth ok')
-          "
+        run: python3 ci_synth_check.py

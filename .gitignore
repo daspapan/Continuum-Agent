@@ -29,4 +29,6 @@ Thumbs.db
 # local run artifacts
 runs/
 *.log
-content/
+content_dex/
+RESUME_UPDATES_FILE.md
+notes_dex

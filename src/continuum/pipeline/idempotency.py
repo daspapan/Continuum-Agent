@@ -72,6 +72,7 @@ class DynamoDBIdempotencyGuard(IdempotencyGuard):
 
     def claim(self, key: str) -> None:
         import time
+
         from botocore.exceptions import ClientError
 
         run_id, _, action = key.partition(":")

@@ -11,3 +11,10 @@ markers = [
     "smoke: post-deploy checks against real AWS infra, not run by default",
 ]
 addopts = "-m 'not smoke'"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

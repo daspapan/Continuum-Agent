@@ -5,7 +5,7 @@ needed to run this in CI) - and specifically, that publish is genuinely
 idempotent: calling the publish phase's underlying claim logic twice for the
 same run only results in one "send."
 """
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from continuum.agent import ClaudeResearchAgent
 from continuum.memory.embeddings import LocalHashEmbeddings

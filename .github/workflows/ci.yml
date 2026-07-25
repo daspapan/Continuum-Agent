@@ -23,7 +23,7 @@ jobs:
       - name: Lint (ruff)
         run: |
           pip install ruff
-          ruff check src tests
+          ruff check src tests   # config: pyproject.toml [tool.ruff]
 
       - name: Run tests
         run: pytest --junitxml=test-results.xml

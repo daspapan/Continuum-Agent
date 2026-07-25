@@ -124,9 +124,15 @@ class OpenSearchServerlessVectorStore(VectorStore):
     collection after `cdk deploy`.
     """
 
-    def __init__(self, embeddings: Embeddings, endpoint: str, index_name: str = "continuum-memory", region: str | None = None):
+    def __init__(
+        self,
+        embeddings: Embeddings,
+        endpoint: str,
+        index_name: str = "continuum-memory",
+        region: str | None = None,
+    ):
         import boto3
-        from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
+        from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
         self.embeddings = embeddings
         self.index_name = index_name
